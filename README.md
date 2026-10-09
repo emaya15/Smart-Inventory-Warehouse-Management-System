@@ -1,0 +1,304 @@
+# Smart Inventory & Warehouse Management System
+
+A RESTful backend application built with **FastAPI** to manage products, warehouses, stock levels, suppliers, purchase orders, sales orders, reservations, dispatches, returns, reports, notifications, and audit logs.
+
+The system is designed around JWT authentication, role-based access control (RBAC), SQLAlchemy, MySQL, Alembic migrations, database transactions, validation, and automated tests.
+
+## Features
+
+- **Authentication & Authorization:** User registration, login, JWT access tokens, password hashing, and role-based permissions.
+- **Product & Category Management:** Product and category CRUD, unique SKU/barcode validation, active status, and warehouse-level stock visibility.
+- **Warehouse Management:** Warehouse records, capacity checks, and inventory by warehouse.
+- **Inventory & Stock Movements:** Stock tracking, available/reserved quantities, movement ledger, low-stock filtering, and protection against negative stock.
+- **Suppliers & Purchase Orders:** Supplier management, purchase order approval, partial receiving, cancellation rules, and stock updates on receipt.
+- **Customers & Sales Orders:** Customer management, order totals, credit-limit checks, order confirmation, and status transitions.
+- **Stock Reservation & Dispatch:** Reserve stock when orders are confirmed, then pick, pack, dispatch, and deliver orders.
+- **Returns & Refunds:** Return requests, inspection, approval/rejection, refund calculations, and handling of good or damaged items.
+- **Notifications:** Background email notifications through SMTP.
+- **Audit Logs:** Track important create, update, approval, cancellation, and deletion actions.
+- **Reports:** Dashboard, stock valuation, low stock, sales, top products, dead stock, and supplier performance.
+- **Validation & Filtering:** Input validation, pagination, search, filtering, and meaningful HTTP error responses.
+- **Bonus features (if implemented):** Stock transfers, stock adjustments, batch/expiry tracking with FEFO, automatic draft purchase orders, weighted-average cost, and Excel report export.
+
+## Technology Stack
+
+- Python 3.9+
+- FastAPI
+- Pydantic
+- SQLAlchemy
+- MySQL
+- Alembic
+- JWT authentication
+- Passlib / bcrypt
+- FastAPI `BackgroundTasks`
+- SMTP (`smtplib`)
+- Pytest
+- Uvicorn
+
+## Project Structure
+
+The exact files may vary based on your implementation. The project is organized around this general structure:
+
+```text
+smart_inventory_warehouse/
+├── app/
+│   ├── main.py
+│   ├── database.py
+│   ├── models/
+│   ├── schemas/
+│   ├── routers/
+│   ├── services/
+│   ├── auth/
+│   └── utils/
+├── alembic/
+├── tests/
+├── alembic.ini
+├── .env.example
+├── .gitignore
+├── requirements.txt
+└── README.md
+```
+
+## Prerequisites
+
+Install the following before running the project:
+
+- Python 3.9 or newer
+- MySQL Server
+- Git (optional, for cloning the repository)
+
+## Installation and Setup
+
+### 1. Clone or open the project
+
+```bash
+git clone <your-repository-url>
+cd smart_inventory_warehouse
+```
+
+If the project is already on your computer, open its folder in VS Code and run the remaining commands from that folder.
+
+### 2. Create and activate a virtual environment
+
+**Windows PowerShell**
+
+```powershell
+py -3.12 -m venv venv
+.\venv\Scripts\Activate.ps1
+```
+
+If Python 3.12 is not installed, use an installed Python version supported by your dependencies.
+
+**macOS / Linux**
+
+```bash
+python3 -m venv venv
+source venv/bin/activate
+```
+
+### 3. Install dependencies
+
+```bash
+python -m pip install --upgrade pip
+pip install -r requirements.txt
+```
+
+### 4. Create the MySQL database
+
+Open MySQL Workbench or a MySQL client and create a database. For example:
+
+```sql
+CREATE DATABASE smart_inventory_db;
+```
+
+Use your actual database name if it differs.
+
+### 5. Configure environment variables
+
+Create a local `.env` file based on `.env.example`:
+
+**Windows PowerShell**
+
+```powershell
+Copy-Item .env.example .env
+```
+
+**macOS / Linux**
+
+```bash
+cp .env.example .env
+```
+
+Update `.env` with your local configuration. Variable names must match those read by your application. A typical example is:
+
+```dotenv
+DATABASE_URL=mysql+pymysql://DB_USER:DB_PASSWORD@localhost:3306/smart_inventory_db
+SECRET_KEY=replace_with_a_long_random_secret
+ACCESS_TOKEN_EXPIRE_MINUTES=30
+
+SMTP_HOST=smtp.example.com
+SMTP_PORT=587
+SMTP_USERNAME=your_email@example.com
+SMTP_PASSWORD=your_email_app_password
+SMTP_FROM_EMAIL=your_email@example.com
+```
+
+Replace all sample values. If your application uses different environment variable names or a different SQLAlchemy MySQL driver, follow your code and `requirements.txt`. Do not commit `.env` or real credentials to GitHub.
+
+### 6. Run database migrations
+
+Make sure MySQL is running and `DATABASE_URL` is correct.
+
+```bash
+alembic upgrade head
+```
+
+If you have changed SQLAlchemy models and need to generate a migration, use:
+
+```bash
+alembic revision --autogenerate -m "describe your change"
+alembic upgrade head
+```
+
+Review autogenerated migration files before applying them. Use Alembic migrations to manage schema changes rather than relying on `Base.metadata.create_all()`.
+
+### 7. Start the API
+
+```bash
+uvicorn app.main:app --reload
+```
+
+If the application entry point differs, adjust the command to match your project structure.
+
+Open the API documentation in your browser:
+
+- Swagger UI: http://127.0.0.1:8000/docs
+- ReDoc: http://127.0.0.1:8000/redoc
+- OpenAPI schema: http://127.0.0.1:8000/openapi.json
+
+## Authentication and Roles
+
+The API uses JWT authentication. Log in through the authentication endpoint and use the returned access token in Swagger UI's **Authorize** dialog as a bearer token.
+
+Typical roles defined by the task:
+
+| Role | Access |
+|---|---|
+| Admin | Full administrative access, including users, warehouses, approvals, and reports |
+| Inventory Manager | Manages inventory-related records, suppliers, purchase/sales orders, and returns according to permissions |
+| Warehouse Staff | Performs warehouse operations for the assigned warehouse |
+
+Use the role names and token format accepted by your implementation. Passwords should be stored as hashes, not plain text. Invalid or expired tokens should be rejected, and users without the required permission should receive an authorization error.
+
+## API Overview
+
+The following endpoints are specified by the task. Endpoint availability and exact request/response formats depend on your implementation and the routers registered in `app/main.py`.
+
+| Module | Endpoints |
+|---|---|
+| Authentication | `POST /auth/register`, `POST /auth/login`, `GET /auth/me` |
+| Categories | `POST /categories`, `GET /categories`, `PUT /categories/{category_id}`, `DELETE /categories/{category_id}` |
+| Products | `POST /products`, `GET /products`, `GET /products/{product_id}`, `PUT /products/{product_id}`, `DELETE /products/{product_id}` |
+| Warehouses | `POST /warehouses`, `GET /warehouses`, `GET /warehouses/{warehouse_id}`, `PUT /warehouses/{warehouse_id}`, `DELETE /warehouses/{warehouse_id}`, `GET /warehouses/{warehouse_id}/inventory` |
+| Inventory | `GET /inventory`, `GET /inventory/{product_id}/{warehouse_id}`, `GET /stock-movements` |
+| Suppliers | `POST /suppliers`, `GET /suppliers`, `GET /suppliers/{supplier_id}`, `PUT /suppliers/{supplier_id}`, `DELETE /suppliers/{supplier_id}` |
+| Purchase Orders | `POST /purchase-orders`, `GET /purchase-orders`, `GET /purchase-orders/{po_id}`, `PUT /purchase-orders/{po_id}/approve`, `POST /purchase-orders/{po_id}/receive`, `PUT /purchase-orders/{po_id}/cancel` |
+| Customers | `POST /customers`, `GET /customers`, `GET /customers/{customer_id}`, `PUT /customers/{customer_id}` |
+| Sales Orders | `POST /sales-orders`, `GET /sales-orders`, `GET /sales-orders/{so_id}`, `PUT /sales-orders/{so_id}/confirm`, `PUT /sales-orders/{so_id}/cancel` |
+| Dispatch | `PUT /sales-orders/{so_id}/pick`, `PUT /sales-orders/{so_id}/pack`, `PUT /sales-orders/{so_id}/dispatch`, `PUT /sales-orders/{so_id}/deliver` |
+| Returns | `POST /sales-orders/{so_id}/returns`, `GET /returns`, `PUT /returns/{return_id}/inspect`, `PUT /returns/{return_id}/approve`, `PUT /returns/{return_id}/reject` |
+| Audit Logs | `GET /audit-logs` |
+| Reports | `GET /reports/dashboard`, `GET /reports/stock-valuation`, `GET /reports/low-stock`, `GET /reports/sales`, `GET /reports/top-products`, `GET /reports/dead-stock`, `GET /reports/supplier-performance` |
+
+**Optional bonus endpoints (only if implemented):** stock transfers (`/transfers`) and stock adjustments (`/adjustments`). See your API documentation for the exact operations and request schemas.
+
+## Email / SMTP Setup
+
+1. Configure SMTP values in `.env`.
+2. Use your email provider's SMTP host, port, username, and app password where required.
+3. Never put SMTP credentials directly in source code or commit them to the repository.
+4. Trigger the relevant API operation and check the application logs and recipient inbox.
+5. Check spam/junk folders if a test email does not appear.
+
+Email delivery depends on valid SMTP configuration and the implementation's notification triggers. The API should log email failures without exposing credentials.
+
+## Running Tests
+
+Run the automated tests from the project root:
+
+```bash
+pytest
+```
+
+For verbose test output:
+
+```bash
+pytest -v
+```
+
+To run a specific test file:
+
+```bash
+pytest tests/test_example.py -v
+```
+
+Replace the example test path with a test file that exists in your repository. Ensure test configuration points to a safe test database and does not modify production data.
+
+## Test Users
+
+Create test accounts using the registration or seed process supported by your application. The task specifies role-based test users, but actual credentials depend on your local database and setup.
+
+| Role | Username / Email | Password |
+|---|---|---|
+| Admin | Add your test admin email | Do not publish a real password |
+| Inventory Manager | Add your test manager email | Do not publish a real password |
+| Warehouse Staff | Add your test staff email | Do not publish a real password |
+
+For a public repository, use disposable local test accounts and document how to create them. Do not commit real passwords, access tokens, or production credentials.
+
+## Important Business Rules
+
+- Product SKU and other required identifiers must be unique.
+- Selling price must be greater than or equal to cost price.
+- Stock must not become negative; available quantity is on-hand quantity minus reserved quantity.
+- Stock changes should be recorded in the stock movement ledger.
+- Purchase orders support approval and partial receiving, with received quantities limited to ordered quantities.
+- Confirming a sales order reserves stock; dispatch reduces on-hand and reserved stock.
+- Returns are limited to eligible delivered orders and must follow the inspection and approval flow.
+- Warehouse staff must be restricted to their assigned warehouse.
+- Important changes should be captured in audit logs.
+- List endpoints should support pagination and relevant search/filter options.
+
+## Error Responses
+
+The API uses HTTP status codes to communicate results. Depending on the endpoint and validation outcome, common codes include:
+
+- `200 OK` — request succeeded
+- `201 Created` — resource created
+- `400 Bad Request` — business rule or request error
+- `401 Unauthorized` — missing, invalid, or expired authentication
+- `403 Forbidden` — insufficient role/permission
+- `404 Not Found` — resource not found
+- `409 Conflict` — duplicate data or conflicting state
+- `422 Unprocessable Entity` — request validation failed
+
+The exact response body is defined by the application.
+
+## Security Notes
+
+- Keep `.env` out of version control and commit only `.env.example` with placeholder values.
+- Use a strong, random JWT secret.
+- Do not publish real test passwords, SMTP credentials, or database credentials.
+- Restrict CORS origins appropriately before production deployment.
+- Use a separate test database for automated tests.
+
+## Assumptions and Configuration Notes
+
+- The database name, environment variable names, SMTP provider, and test account credentials must be adjusted to match your local setup.
+- This README describes the task's intended API surface; confirm actual paths and methods in `/docs`.
+- Bonus features should be listed as completed only if they are implemented and tested in your repository.
+- Add screenshots of Swagger API testing and sample email notifications to your submission if required by your mentor or assignment.
+
+## License
+
+Add the license used by your repository, if applicable.
